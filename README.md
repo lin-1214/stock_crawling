@@ -14,6 +14,7 @@ https://www.tpex.org.tw/web/stock/aftertrading/peratio_stk/pera.php?l=zh-tw
 
 ![Alt text](./img/image.png)
 csv: 儲存爬網結果
+
 scripts: 執行指令
 
 src:
