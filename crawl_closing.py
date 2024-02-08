@@ -53,6 +53,7 @@ for i in tqdm(range(int(startYear), int(endYear)+1)):
     for j in range(start, end):
         headers = {'user-agent': header_list[str(random.randint(0, len(header_list)-1))]}
         daily_price_list = []
+        tmp = []
         if j < 10:
             j = "0" + str(j)
 
@@ -74,7 +75,9 @@ for i in tqdm(range(int(startYear), int(endYear)+1)):
             daily_price_list = res.json().get("aaData", [])
             for k in range(len(daily_price_list)):
                 if daily_price_list[k][-3] == "--":
-                    daily_price_list[k][-3] = "0"
+                    continue
+                else:
+                    tmp.append(daily_price_list[k][-3])
 
         
         if res.status_code != 200:
@@ -83,7 +86,7 @@ for i in tqdm(range(int(startYear), int(endYear)+1)):
         
         # print(daily_price_list)
         dates.extend([daily_price_list[i][0] for i in range(len(daily_price_list))])
-        closingPrices.extend([daily_price_list[i][-3] for i in range(len(daily_price_list))])
+        closingPrices.extend(tmp)
         sleep(random.uniform(1, 3))
 
 # Calculate returns & standard deviation
