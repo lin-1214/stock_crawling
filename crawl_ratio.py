@@ -6,6 +6,8 @@ import statistics
 import random
 from time import sleep
 from tqdm import tqdm
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 # request API
 # TWSE
@@ -18,6 +20,14 @@ f_headers = open("./src/headers.json")
 config = json.load(f_config)
 header_list = json.load(f_headers)
 
+# set retry
+retry_times = 5
+retry_backoff_factor = 2
+session = requests.Session()
+retry = Retry(total=retry_times, backoff_factor = retry_backoff_factor, status_forcelist=[500, 502, 503, 504])
+adapter = HTTPAdapter(max_retries = retry)
+session.mount("http://", adapter)
+session.mount("https://", adapter)
 
 # parse input data
 companyCode = config["companyCode"]
@@ -59,11 +69,11 @@ for i in tqdm(range(int(startYear), int(endYear)+1)):
             j = "0" + str(j)
 
         if website == "twse":
-            res = requests.get(urlTWSE, params={
+            res = session.get(urlTWSE, params={
                 "response": "json",
                 "date": f"{i}{j}01",
                 "stockNo": companyCode
-            }, headers=headers)
+            }, headers=headers, timeout=5)
             if res.status_code != 200:
                 print(f"[-]Error response: {res.status_code}")
                 exit(1)
@@ -73,11 +83,11 @@ for i in tqdm(range(int(startYear), int(endYear)+1)):
             PBRs.extend([daily_ratio_list[i][-2] for i in range(len(daily_ratio_list))])
 
         elif website == "tpex":
-            res = requests.get(urlTPEX, params={
+            res = session.get(urlTPEX, params={
                 "l": "zh-tw",
                 "d": f"{i - 1911}/{j}",
                 "stkno": companyCode
-            }, headers=headers)
+            }, headers=headers, timeout=5)
             daily_ratio_list = res.json().get("aaData", [])
             if res.status_code != 200:
                 print(f"[-]Error response: {res.status_code}")

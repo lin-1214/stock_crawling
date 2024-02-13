@@ -6,6 +6,8 @@ import statistics
 import random
 from time import sleep
 from tqdm import tqdm
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 # request API
 # TWSE
@@ -17,6 +19,16 @@ f_config = open("./src/config.json")
 f_headers = open("./src/headers.json")
 config = json.load(f_config)
 header_list = json.load(f_headers)
+
+# set retry
+retry_times = 5
+retry_backoff_factor = 2
+session = requests.Session()
+retry = Retry(total=retry_times, backoff_factor = retry_backoff_factor, status_forcelist=[500, 502, 503, 504])
+adapter = HTTPAdapter(max_retries = retry)
+session.mount("http://", adapter)
+session.mount("https://", adapter)
+
 
 # parse input data
 companyCode = config["companyCode"]
@@ -53,40 +65,49 @@ for i in tqdm(range(int(startYear), int(endYear)+1)):
     for j in range(start, end):
         headers = {'user-agent': header_list[str(random.randint(0, len(header_list)-1))]}
         daily_price_list = []
-        tmp = []
+        tmp_rate = []
+        tmp_date = []
         if j < 10:
             j = "0" + str(j)
 
         if website == "twse":
-            res = requests.get(urlTWSE, params={
+            res = session.get(urlTWSE, params={
                 "response": "json",
                 "date": f"{i}{j}01",
                 "stockNo": companyCode
-            }, headers=headers)
+            }, headers=headers, timeout=5)
+            if res.status_code != 200:
+                print(f"[-]Error response: {res.status_code}")
+                exit(1)
             daily_price_list = res.json().get("data", [])
+            dates.extend([daily_price_list[i][0] for i in range(len(daily_price_list))])
+            closingPrices.extend([daily_price_list[i][-3] for i in range(len(daily_price_list))])
 
 
         elif website == "tpex":
-            res = requests.get(urlTPEX, params={
+            res = session.get(urlTPEX, params={
                 "l": "zh-tw",
                 "d": f"{i - 1911}/{j}",
                 "stkno": companyCode
-            }, headers=headers)
+            }, headers=headers, timeout=5)
+            if res.status_code != 200:
+                print(f"[-]Error response: {res.status_code}")
+                exit(1)
             daily_price_list = res.json().get("aaData", [])
+
             for k in range(len(daily_price_list)):
                 if daily_price_list[k][-3] == "--":
                     continue
                 else:
-                    tmp.append(daily_price_list[k][-3])
+                    tmp_rate.append(daily_price_list[k][-3])
+                    tmp_date.append(daily_price_list[k][0])
+            
+            dates.extend(tmp_date)
+            closingPrices.extend(tmp_rate)
+            
 
         
-        if res.status_code != 200:
-            print(f"[-]Error response: {res.status_code}")
-            exit(1)
-        
         # print(daily_price_list)
-        dates.extend([daily_price_list[i][0] for i in range(len(daily_price_list))])
-        closingPrices.extend(tmp)
         sleep(random.uniform(1, 3))
 
 # Calculate returns & standard deviation
