@@ -115,7 +115,7 @@ for i in range(1, len(closingPrices)):
     if float(closingPrices[i-1]) == 0:
         Returns.append(0)
     else: 
-        Returns.append(np.round((float(closingPrices[i]) - float(closingPrices[i-1])) / float(closingPrices[i-1]), 5))
+        Returns.append(np.round((float(closingPrices[i].replace(",", "")) - float(closingPrices[i-1].replace(",", ""))) / float(closingPrices[i-1].replace(",", "")), 5))
 
 volatility = statistics.stdev(Returns)
 annualized_volatility = np.round(volatility * np.sqrt(len(Returns)), 5)
