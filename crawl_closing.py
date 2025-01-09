@@ -8,12 +8,13 @@ from time import sleep
 from tqdm import tqdm
 from requests.adapters import HTTPAdapter
 from requests.packages.urllib3.util.retry import Retry
+import os
 
 # request API
 # TWSE
 urlTWSE = "https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY"
 # TPEX
-urlTPEX = "https://www.tpex.org.tw/web/stock/aftertrading/daily_trading_info/st43_result.php"
+urlTPEX = "https://www.tpex.org.tw/www/zh-tw/afterTrading/tradingStock"
 
 f_config = open("./src/config.json")
 f_headers = open("./src/headers.json")
@@ -86,14 +87,16 @@ for i in tqdm(range(int(startYear), int(endYear)+1)):
 
         elif website == "tpex":
             res = session.get(urlTPEX, params={
-                "l": "zh-tw",
-                "d": f"{i - 1911}/{j}",
-                "stkno": companyCode
+                "code": companyCode,
+                "date": f"{i}/{j}/01",
+                "response": "json"
+                
             }, headers=headers, timeout=5)
             if res.status_code != 200:
                 print(f"[-]Error response: {res.status_code}")
                 exit(1)
-            daily_price_list = res.json().get("aaData", [])
+
+            daily_price_list = res.json()['tables'][0]['data']
 
             for k in range(len(daily_price_list)):
                 if daily_price_list[k][-3] == "--":
@@ -110,15 +113,21 @@ for i in tqdm(range(int(startYear), int(endYear)+1)):
         # print(daily_price_list)
         sleep(random.uniform(1, 3))
 
+for i in range(len(closingPrices)):
+    closingPrices[i] = closingPrices[i].replace(",", "")
+
 # Calculate returns & standard deviation
 for i in range(1, len(closingPrices)):
     if float(closingPrices[i-1]) == 0:
         Returns.append(0)
     else: 
-        Returns.append(np.round((float(closingPrices[i].replace(",", "")) - float(closingPrices[i-1].replace(",", ""))) / float(closingPrices[i-1].replace(",", "")), 5))
+        Returns.append(np.round((float(closingPrices[i]) - float(closingPrices[i-1])) / float(closingPrices[i-1]), 5))
 
 volatility = statistics.stdev(Returns)
 annualized_volatility = np.round(volatility * np.sqrt(len(Returns)), 5)
+
+# Before writing to csv file, add these lines to create directories
+os.makedirs("./csv/closingPrice", exist_ok=True)
 
 # Write to csv file
 mapping = {"Date": dates, "Closing Price": closingPrices, "Return": Returns}
