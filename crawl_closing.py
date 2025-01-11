@@ -81,8 +81,8 @@ for i in tqdm(range(int(startYear), int(endYear)+1)):
                 print(f"[-]Error response: {res.status_code}")
                 exit(1)
             daily_price_list = res.json().get("data", [])
-            dates.extend([daily_price_list[i][0] for i in range(len(daily_price_list))])
-            closingPrices.extend([daily_price_list[i][-3] for i in range(len(daily_price_list))])
+            dates.extend([daily_price_list[k][0] for k in range(len(daily_price_list))])
+            closingPrices.extend([daily_price_list[k][-3] for k in range(len(daily_price_list))])
 
 
         elif website == "tpex":
