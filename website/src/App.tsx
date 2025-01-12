@@ -1,5 +1,8 @@
 import { useState } from 'react'
 import './App.css'
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons';
+import { faEnvelope } from '@fortawesome/free-solid-svg-icons';
 
 const headers = [
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
@@ -21,6 +24,22 @@ const headers = [
   "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/116.0",
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/116.0"
 ] as const;
+
+// Add these social media links and icons (using emoji as placeholders)
+const SOCIAL_LINKS = {
+  email: {
+    url: "mailto:ylin82051@gmail.com",
+    icon: <FontAwesomeIcon icon={faEnvelope} />
+  },
+  linkedin: {
+    url: "https://www.linkedin.com/in/lin1214",
+    icon: <FontAwesomeIcon icon={faLinkedin} />
+  },
+  github: {
+    url: "https://github.com/lin-1214",
+    icon: <FontAwesomeIcon icon={faGithub} />
+  }
+} as const;
 
 function App() {
   const [showWelcome, setShowWelcome] = useState(true)
@@ -135,14 +154,34 @@ function App() {
         }
       }
 
+      
+
       if (dates.length > 0) {
-        // Create CSV content
-        const csvContent = ['Date,Closing Price\n'];
+        // Calculate returns
+        const returns = [0]; // First return is always 0
+        for (let i = 1; i < closingPrices.length; i++) {
+          const previousPrice = closingPrices[i-1];
+          const currentPrice = closingPrices[i];
+          const return_value = previousPrice === 0 ? 
+            0 : 
+            Number(((currentPrice - previousPrice) / previousPrice).toFixed(5));
+          returns.push(return_value);
+        }
+
+        // Calculate volatility
+        const mean = returns.reduce((a, b) => a + b, 0) / returns.length;
+        const variance = returns.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / returns.length;
+        const volatility = Math.sqrt(variance);
+        const annualizedVolatility = Number((volatility * Math.sqrt(returns.length)).toFixed(5));
+
+        // Create CSV content with returns
+        const csvContent = ['Date,Closing Price,Return\n'];
         dates.forEach((date, index) => {
           const price = closingPrices[index];
-          // Check if price is a valid number
+          const return_value = returns[index];
+        
           const priceValue = isNaN(price) ? 'NA' : price;
-          csvContent.push(`${date},${priceValue}\n`);
+          csvContent.push(`${date},${priceValue},${return_value}\n`);
         });
 
         // Create blob and download link
@@ -160,6 +199,9 @@ function App() {
         // Cleanup
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
+
+        console.log(`Volatility: ${volatility}`);
+        console.log(`Annualized Volatility: ${annualizedVolatility}`);
       }
       
     } catch (error) {
@@ -236,6 +278,21 @@ function App() {
         </button>
       </div>
 
+      <footer className="contact-info">
+        <div className="social-links">
+          {Object.entries(SOCIAL_LINKS).map(([platform, { url, icon }]) => (
+            <a
+              key={platform}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="social-link"
+            >
+              {icon}
+            </a>
+          ))}
+        </div>
+      </footer>
     </div>
   )
 
