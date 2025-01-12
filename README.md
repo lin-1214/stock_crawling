@@ -1,6 +1,16 @@
 # Stock Crawling
 
-A python script for crawling daily stock price information on TWSE & TPEX
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/yourusername/stock-crawling/releases)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+> A python script for crawling daily stock price information on TWSE & TPEX
+
+## Website Release Notes
+Latest version: v1.0.0 (2024-03-XX)
+- Initial release with TWSE & TPEX stock data crawling
+- Supports daily closing price crawling
+- See [Release History](#release-history) for detailed changes
+- Link: https://stock-crawling.vercel.app/
 
 證券交易所(TWSE)：
 https://www.twse.com.tw/zh/trading/historical/stock-day-avg.html
@@ -10,7 +20,7 @@ https://www.twse.com.tw/zh/trading/historical/bwibbu.html
 https://www.tpex.org.tw/web/stock/aftertrading/daily_trading_info/st43.php?l=zh-tw
 https://www.tpex.org.tw/web/stock/aftertrading/peratio_stk/pera.php?l=zh-tw
 
-## Structure
+## Original Structure
 
 ![Alt text](./img/image.png)
 csv: 儲存爬網結果
