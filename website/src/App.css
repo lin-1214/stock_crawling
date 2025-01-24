@@ -73,10 +73,10 @@ body {
   align-items: center;
   cursor: pointer;
   position: relative;
-  background-image: url('./assets/bgImage2.jpg');
+  /* background-image: url('./assets/bgImage2.jpg');
   background-size: cover;
   background-position: center;
-  background-repeat: no-repeat;
+  background-repeat: no-repeat; */
 }
 
 .welcome-page::before {

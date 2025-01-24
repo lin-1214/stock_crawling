@@ -57,6 +57,8 @@ function App() {
       setLoading(true);
       const dates: string[] = [];
       const closingPrices: number[] = [];
+      const PERatio: number[] = [];
+      const PBRatio: number[] = [];
       
       // Helper function to get random header
       const getRandomHeader = () => {
@@ -91,9 +93,8 @@ function App() {
               stockNo: formData.companyCode
             });
 
-            const targetUrl = `https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY?${queryParams}`
-            console.log(targetUrl)
-            const res = await fetch(targetUrl, {
+            const targetUrlOne = `https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY?${queryParams}`
+            const res = await fetch(targetUrlOne, {
               method: 'GET',
               headers: {
                 'User-Agent': getRandomHeader()
@@ -114,7 +115,27 @@ function App() {
               closingPrices.push(parseFloat(daily_price_list[k][6].replace(/,/g, "")))
             }
 
-            
+            const targetUrlTwo = `https://www.twse.com.tw/rwd/zh/afterTrading/BWIBBU?${queryParams}`
+            const resTwo = await fetch(targetUrlTwo, {
+              method: 'GET',
+              headers: {
+                'User-Agent': getRandomHeader()
+              }
+            });
+
+            if (resTwo.status !== 200) {
+              console.error(`Error fetching data for ${date}: ${resTwo.status}`);
+              alert(`Error fetching data for ${date}: ${resTwo.status}`);
+              return;
+            }
+
+            const dataTwo = await resTwo.json();
+            const daily_ratio_list = dataTwo.data;
+
+            for (let k = 0; k < daily_ratio_list.length; k++) {
+              PERatio.push(parseFloat(daily_ratio_list[k][3].replace(/,/g, "")))
+              PBRatio.push(parseFloat(daily_ratio_list[k][4].replace(/,/g, "")))
+            }
 
           } else if (formData.website === "tpex") {
             const date = `${i}/${j < 10 ? "0" + j.toString() : j.toString()}/01`
@@ -150,6 +171,35 @@ function App() {
               dates.push(daily_price_list[k][0])
               closingPrices.push(parseFloat(daily_price_list[k][6].replace(/,/g, "")))
             }
+
+            // const proxyUrlTwo = 'https://api.codetabs.com/v1/proxy?quest=';
+            const targetUrlTwo = `https://www.tpex.org.tw/www/zh-tw/afterTrading/peQryStock?date=${encodeURIComponent(date)}&code=${encodeURIComponent(formData.companyCode)}&response=json`;
+            
+            const resTwo = await fetch(proxyUrl + encodeURIComponent(targetUrlTwo), {
+              method: 'POST',
+              headers: {
+                'User-Agent': getRandomHeader(),
+                'Accept': 'application/json, text/javascript, */*; q=0.01',
+                'Content-Type': 'application/x-www-form-urlencoded',
+              }
+            });
+
+            if (resTwo.status !== 200) {
+              console.error(`Error fetching data for ${date}: ${resTwo.status}`);
+              alert(`Error fetching data for ${date}: ${resTwo.status}`);
+              return;
+            }
+
+            const dataTwo = await resTwo.json();
+
+            console.log(dataTwo)
+            const daily_ratio_list = dataTwo.tables[0].data;
+            // console.log(daily_ratio_list)
+
+            for (let k = 0; k < daily_ratio_list.length; k++) {
+              PERatio.push(parseFloat(daily_ratio_list[k][1].replace(/,/g, "")))
+              PBRatio.push(parseFloat(daily_ratio_list[k][4].replace(/,/g, "")))
+            }
           }
         }
       }
@@ -175,13 +225,18 @@ function App() {
         const annualizedVolatility = Number((volatility * Math.sqrt(returns.length)).toFixed(5));
 
         // Create CSV content with returns
-        const csvContent = ['Date,Closing Price,Return\n'];
+        const csvContent = ['Date,Closing Price,Return,PE Ratio,PB Ratio\n'];
         dates.forEach((date, index) => {
           const price = closingPrices[index];
           const return_value = returns[index];
+          const pe_ratio = PERatio[index];
+          const pb_ratio = PBRatio[index];
         
           const priceValue = isNaN(price) ? 'NA' : price;
-          csvContent.push(`${date},${priceValue},${return_value}\n`);
+          const peRatioValue = isNaN(pe_ratio) ? 'NA' : pe_ratio;
+          const pbRatioValue = isNaN(pb_ratio) ? 'NA' : pb_ratio;
+
+          csvContent.push(`${date},${priceValue},${return_value},${peRatioValue},${pbRatioValue}\n`);
         });
 
         // Create blob and download link
