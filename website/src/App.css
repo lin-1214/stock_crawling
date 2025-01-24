@@ -262,6 +262,7 @@ a:hover {
   border-radius: 15px;
   backdrop-filter: blur(10px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  position: relative;
 }
 
 .input-group {
@@ -414,4 +415,69 @@ tr:hover {
 
 .social-link:hover {
   transform: scale(1.1);
+}
+
+.success-popup,
+.error-popup {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-out;
+  text-align: center;
+  pointer-events: none;
+  font-size: 0.9rem;
+  color: white;
+  width: max-content;
+  max-width: 80%;
+}
+
+.success-popup {
+  background-color: rgba(76, 175, 80, 0.9);
+}
+
+.error-popup {
+  background-color: rgba(211, 47, 47, 0.9);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1;
+}
+
+.form-inputs.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 5px solid #f3f3f3;
+  border-top: 5px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
