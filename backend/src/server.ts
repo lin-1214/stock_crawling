@@ -112,6 +112,10 @@ app.post('/api/ratioTPEX', async (req, res) => {
   }
 });
 
+app.use('/', (req, res) => {
+  res.send('Server is running');
+});
+
 // For local development
 if (process.env.NODE_ENV !== 'production') {
   app.listen(port, () => {
