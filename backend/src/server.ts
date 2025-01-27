@@ -112,6 +112,12 @@ app.post('/api/ratioTPEX', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
+// For local development
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(port, () => {
     console.log(`Proxy server running on port ${port}`);
-});
+  });
+}
+
+// This is important for Vercel
+export default app;
