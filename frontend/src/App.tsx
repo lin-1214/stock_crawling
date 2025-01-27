@@ -155,7 +155,11 @@ function App() {
       }
 
       for (let k = 0; k < data.length; k++) {
-        dates.push(data[k][0]);
+        // Format TWSE date from "113年07月01日" to "113/07/01"
+        const formattedDate = formData.website === "twse" 
+          ? data[k][0].replace('年', '/').replace('月', '/').replace('日', '')
+          : data[k][0];
+        dates.push(formattedDate);
         PERatio.push(parseFloat(data[k][formData.website === "twse" ? 3 : 1].replace(/,/g, "")));
         PBRatio.push(parseFloat(data[k][4].replace(/,/g, "")));
       }
