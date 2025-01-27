@@ -335,11 +335,11 @@ function App() {
             <h3>Instructions:</h3>
             <ol>
               <li>Select mode.</li>
-              <li>Choose start and end dates, you may scroll on the calendar to select different years</li>
+              <li>Choose start and end dates, you may scroll on the calendar to select different years.</li>
               <li>Enter company code.</li>
               <li>Select website.</li>
               <li>Make sure the company code matches the website.</li>
-              <li>Click "Crawl Data" to download CSV file</li>
+              <li>Click "Crawl Data" to download CSV file.</li>
             </ol>
             <hr className="tutorial-divider" />
             <div className="tutorial-contact">
