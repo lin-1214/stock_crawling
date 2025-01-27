@@ -57,11 +57,12 @@ body {
 .app-container {
   height: 100vh;
   width: 100vw;
-  overflow: hidden;
+  overflow-y: auto;
   background: #13131f;
-  position: fixed;
+  position: relative;
   top: 0;
   left: 0;
+  padding-bottom: 4rem;
 }
 
 /* Welcome Page */
@@ -115,19 +116,22 @@ body {
 
 /* Main Page */
 .main-page {
-  height: 100vh;
-  padding: 1.5rem 2rem;
+  min-height: 100vh;
+  padding: 2rem;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
   box-sizing: border-box;
   gap: 1rem;
+  padding-top: 2rem;
 }
 
 .main-page h1 {
-  font-size: 3rem;
-  margin-bottom: 1.5rem;
+  font-size: clamp(2rem, 5vw, 3rem);
+  text-align: center;
+  margin: 0.5rem 0;
+  width: 100%;
   background: linear-gradient(45deg, #fff, #888);
   -webkit-background-clip: text;
   background-clip: text;
@@ -254,9 +258,9 @@ a:hover {
 
 .form-container {
   width: 100%;
-  max-width: 900px;
+  max-width: min(900px, 90vw);
   padding: 2rem;
-  margin: 0;
+  margin: 1rem auto 4rem auto;
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 15px;
@@ -270,6 +274,7 @@ a:hover {
   flex-direction: column;
   gap: 0.5rem;
   margin-bottom: 1.2rem;
+  width: 100%;
 }
 
 .input-group label {
@@ -289,6 +294,7 @@ a:hover {
   border-radius: 8px;
   font-size: 1.1rem;
   width: 100%;
+  max-width: 100%;
   height: 48px;
   box-sizing: border-box;
   -webkit-appearance: none;
@@ -347,10 +353,14 @@ button:hover {
 }
 
 .data-table {
+  width: 100%;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin: 1rem 0;
 }
 
 table {
+  min-width: 600px;
   width: 100%;
   border-collapse: collapse;
 }
@@ -369,9 +379,21 @@ tr:hover {
   background-color: #f5f5f5;
 }
 
-/* Add new class for animated main page */
+/* Add animation class */
 .main-page.animate {
-  animation: fadeIn 0.8s ease-out;
+  animation: fadeInMain 0.8s ease-out;
+}
+
+/* Create a new animation specifically for main page */
+@keyframes fadeInMain {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* Add these styles for date input */
@@ -432,8 +454,9 @@ tr:hover {
   pointer-events: none;
   font-size: 0.9rem;
   color: white;
-  width: max-content;
+  width: min(80%, 400px);
   max-width: 80%;
+  word-wrap: break-word;
 }
 
 .success-popup {
@@ -457,10 +480,15 @@ tr:hover {
 
 .loading-overlay {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 1;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 15px;
 }
 
 .form-inputs.disabled {
@@ -480,4 +508,283 @@ tr:hover {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Add these new styles */
+.mode-toggle {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.mode-button {
+  flex: 1;
+  min-width: 140px;
+  padding: 0.8rem;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 0;
+}
+
+.mode-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mode-button.active {
+  background: #646cff;
+  border-color: #646cff;
+}
+
+.mode-button.active:hover {
+  background: #747bff;
+}
+
+/* Update existing button styles to exclude mode buttons */
+.form-container > button {
+  width: 100%;
+  margin: 1.5rem 0 0 0;
+  padding: 0.8rem;
+  height: auto;
+  white-space: normal;
+  background-color: #646cff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1.1rem;
+}
+
+.form-container > button:hover {
+  background-color: #747bff;
+}
+
+/* Add media queries for different screen sizes */
+@media (max-width: 768px) {
+  .main-page {
+    padding-top: 0.5rem;
+  }
+
+  .form-container {
+    padding: 1.5rem;
+    margin: 0.5rem auto 3rem auto;
+  }
+
+  .mode-toggle {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .mode-button {
+    width: 100%;
+  }
+
+  .input-group label {
+    font-size: 1rem;
+  }
+
+  .input-group input,
+  .input-group select {
+    font-size: 1rem;
+    height: 40px;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-page {
+    padding: 0.5rem;
+  }
+
+  .form-container {
+    padding: 1rem;
+    margin: 0.5rem auto 2rem auto;
+  }
+
+  .success-popup,
+  .error-popup {
+    width: 90%;
+    font-size: 0.8rem;
+  }
+}
+
+/* Add smooth scrolling to the whole page */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Ensure proper spacing between elements */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Improve form inputs on mobile */
+@media (hover: none) and (pointer: coarse) {
+  .input-group input,
+  .input-group select,
+  button {
+    min-height: 44px;
+  }
+}
+
+/* Tutorial styles */
+.tutorial-container {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 1000;
+}
+
+.tutorial-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(100, 108, 255, 0.5);
+  color: #646cff;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(100, 108, 255, 0.2);
+  transition: all 0.3s ease;
+  padding: 0;
+  margin: 0;
+  backdrop-filter: blur(8px);
+}
+
+.tutorial-button:hover {
+  transform: scale(1.1);
+  background: rgba(100, 108, 255, 0.2);
+  border-color: #646cff;
+  box-shadow: 0 4px 20px rgba(100, 108, 255, 0.4);
+}
+
+.tutorial-popup {
+  position: absolute;
+  bottom: calc(100% + 1rem);
+  right: 0;
+  width: 300px;
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.tutorial-popup h3 {
+  color: #fff;
+  margin-bottom: 1rem;
+  font-size: 1.2rem;
+}
+
+.tutorial-popup ol {
+  color: #fff;
+  margin: 0;
+  padding-left: 1.5rem;
+}
+
+.tutorial-popup li {
+  margin-bottom: 0.8rem;
+  line-height: 1.4;
+}
+
+.tutorial-popup .close-tutorial {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.8rem;
+  background: #646cff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.3s ease;
+}
+
+.tutorial-popup .close-tutorial:hover {
+  background: #747bff;
+}
+
+/* Media queries for tutorial */
+@media (max-width: 768px) {
+  .tutorial-container {
+    bottom: 1.5rem;
+    right: 1.5rem;
+  }
+
+  .tutorial-button {
+    width: 42px;
+    height: 42px;
+    font-size: 1.3rem;
+  }
+
+  .tutorial-popup {
+    width: 280px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tutorial-container {
+    bottom: 1rem;
+    right: 1rem;
+  }
+
+  .tutorial-button {
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+  }
+
+  .tutorial-popup {
+    width: 260px;
+  }
+}
+
+.tutorial-divider {
+  margin: 1rem 0;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tutorial-contact {
+  margin-top: 1rem;
+}
+
+.tutorial-contact h3 {
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.tutorial-contact p {
+  color: #fff;
+  margin-bottom: 0.8rem;
+  font-size: 0.9rem;
+}
+
+.tutorial-social-links {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  margin-bottom: 1rem;
+}
+
+.tutorial-social-link {
+  color: #646cff;
+  font-size: 1.2rem;
+  transition: all 0.3s ease;
+}
+
+.tutorial-social-link:hover {
+  color: #747bff;
+  transform: scale(1.1);
 }
