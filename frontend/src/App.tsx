@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGithub, faLinkedin } from '@fortawesome/free-brands-svg-icons';
@@ -25,7 +25,7 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [showError, setShowError] = useState<string | null>(null)
-  const [mode, setMode] = useState<'price' | 'ratio'>('price')
+  const [mode, setMode] = useState<'price' | 'ratio' | 'index'>('price')
   const [formData, setFormData] = useState({
     start: "2024-07",
     end: "2024-12",
@@ -34,6 +34,14 @@ function App() {
   })
   const [shouldAnimate, setShouldAnimate] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false);
+
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  useEffect(() => {
+    if (mode === 'index') {
+      setFormData(prev => ({ ...prev, website: 'twse' }));
+    }
+  }, [mode]);
 
   const handleCrawlData = async () => {
     try {
@@ -44,6 +52,7 @@ function App() {
         const closingPrices: number[] = [];
         const PERatio: number[] = [];
         const PBRatio: number[] = [];
+        const indexValues: number[] = [];
 
         // start from year
         for (let i = parseInt(formData.start.split("-")[0]); i < parseInt(formData.end.split("-")[0])+1; i++) {
@@ -70,17 +79,22 @@ function App() {
 
             if (mode === 'price') {
               await fetchClosingPrices(date, dates, closingPrices);
-            } else {
+            } else if (mode === 'ratio') {
               await fetchRatios(date, dates, PERatio, PBRatio);
+            } else if (mode === 'index') {
+              await fetchIndexData(date, dates, indexValues);
             }
+            
           }
         }
 
         if (dates.length > 0) {
           if (mode === 'price') {
             downloadPriceData(dates, closingPrices);
-          } else {
+          } else if (mode === 'ratio') {
             downloadRatioData(dates, PERatio, PBRatio);
+          } else if (mode === 'index') {
+            downloadIndexData(dates, indexValues);
           }
           
           setShowSuccess(true);
@@ -102,6 +116,7 @@ function App() {
 
   const fetchClosingPrices = async (date: string, dates: string[], closingPrices: number[]) => {
     try {
+      await delay(100);
       const endpoint = formData.website === "twse" ? '/closingTWSE' : '/closingTPEX';
       const response = await instance.get(endpoint, {
         params: {
@@ -134,6 +149,7 @@ function App() {
 
   const fetchRatios = async (date: string, dates: string[], PERatio: number[], PBRatio: number[]) => {
     try {
+      await delay(100);
       const endpoint = formData.website === "twse" ? '/ratioTWSE' : '/ratioTPEX';
       const method = formData.website === "twse" ? 'get' : 'post';
       
@@ -170,6 +186,37 @@ function App() {
     }
   };
 
+  const fetchIndexData = async (date: string, dates: string[], indexValues: number[]) => {
+    try {
+      await delay(100);
+      const endpoint = '/indexTWSE';
+      const response = await instance.get(endpoint, {
+        params: {
+          date: date,
+          code: formData.companyCode
+        }
+      });
+
+      const data = response.data?.data;
+
+      if (!data) {
+        console.error(`No index data received for ${date}`);
+        setShowError(`No index data received for ${date}`);
+        setTimeout(() => setShowError(null), 3000);
+        return;
+      }
+
+      for (let k = 0; k < data.length; k++) {
+        dates.push(data[k][0]);
+        indexValues.push(parseFloat(data[k][4].replace(/,/g, "")));
+      }
+    } catch (error) {
+      console.error(`Error fetching index data for ${date}:`, error);
+      setShowError(`Error fetching index data for ${date}`);
+      setTimeout(() => setShowError(null), 3000);
+    }
+  };
+
   const downloadPriceData = (dates: string[], closingPrices: number[]) => {
     const returns = calculateReturns(closingPrices);
     const csvContent = ['Date,Closing Price,Return\n'];
@@ -198,6 +245,20 @@ function App() {
     downloadCSV(csvContent, 'ratio');
   };
 
+  const downloadIndexData = (dates: string[], indexValues: number[]) => {
+    // const returns = calculateReturns(indexValues);
+    const csvContent = ['Date,Index Value\n'];
+    
+    dates.forEach((date, index) => {
+      const value = indexValues[index];
+      // const return_value = returns[index];
+      const indexValue = isNaN(value) ? 'NA' : value;
+      csvContent.push(`${date},${indexValue}\n`);
+    });
+
+    downloadCSV(csvContent, 'index');
+  };
+
   const calculateReturns = (prices: number[]) => {
     const returns = [0];
     for (let i = 1; i < prices.length; i++) {
@@ -211,12 +272,15 @@ function App() {
     return returns;
   };
 
-  const downloadCSV = (csvContent: string[], type: 'price' | 'ratio') => {
+  const downloadCSV = (csvContent: string[], type: 'price' | 'ratio' | 'index') => {
     const blob = new Blob(csvContent, { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     
-    const fileName = `stock_${type}_${formData.companyCode}_${formData.start.replace(/-/g, '')}_${formData.end.replace(/-/g, '')}.csv`;
+    const fileName = type === 'index'
+      ? `stock_${type}_${formData.start.replace(/-/g, '')}_${formData.end.replace(/-/g, '')}.csv`
+      : `stock_${type}_${formData.companyCode}_${formData.start.replace(/-/g, '')}_${formData.end.replace(/-/g, '')}.csv`;
+    
     link.setAttribute('href', url);
     link.setAttribute('download', fileName);
     document.body.appendChild(link);
@@ -267,6 +331,13 @@ function App() {
             >
               PE/PB Ratio
             </button>
+            <button
+              className={`mode-button ${mode === 'index' ? 'active' : ''}`}
+              onClick={() => setMode('index')}
+              type="button"
+            >
+              Index
+            </button>
           </div>
 
           <div className="input-group">
@@ -289,31 +360,35 @@ function App() {
             />
           </div>
 
-          <div className="input-group">
-            <label htmlFor="companyCode">Company Code:</label>
-            <input
-              type="text"
-              id="companyCode"
-              autoFocus
-              value={formData.companyCode}
-              onChange={(e) => {
-                const value = e.target.value;
-                setFormData(prev => ({...prev, companyCode: value}));
-              }}
-            />
-          </div>
+          {mode !== 'index' && (
+            <>
+              <div className="input-group">
+                <label htmlFor="companyCode">Company Code:</label>
+                <input
+                  type="text"
+                  id="companyCode"
+                  autoFocus
+                  value={formData.companyCode}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData(prev => ({...prev, companyCode: value}));
+                  }}
+                />
+              </div>
 
-          <div className="input-group">
-            <label htmlFor="website">Website:</label>
-            <select
-              id="website"
-              value={formData.website}
-              onChange={(e) => setFormData({...formData, website: e.target.value})}
-            >
-              <option value="twse">TWSE</option>
-              <option value="tpex">TPEX</option>
-            </select>
-          </div>
+              <div className="input-group">
+                <label htmlFor="website">Website:</label>
+                <select
+                  id="website"
+                  value={formData.website}
+                  onChange={(e) => setFormData({...formData, website: e.target.value})}
+                >
+                  <option value="twse">TWSE</option>
+                  <option value="tpex">TPEX</option>
+                </select>
+              </div>
+            </>
+          )}
         </div>
 
         <button 
@@ -321,7 +396,7 @@ function App() {
           onClick={handleCrawlData} 
           disabled={loading}
         >
-          {loading ? 'Crawling...' : `Crawl ${mode === 'price' ? 'Closing Price' : 'PE/PB Ratio'} Data`}
+          {loading ? 'Crawling...' : `Crawl ${mode === 'price' ? 'Closing Price' : mode === 'ratio' ? 'PE/PB Ratio' : 'Index'} Data`}
         </button>
       </div>
 

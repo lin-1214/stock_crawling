@@ -112,6 +112,27 @@ app.post('/api/ratioTPEX', async (req, res) => {
   }
 });
 
+app.get('/api/indexTWSE', async (req, res) => {
+  try {
+    const { date } = req.query;
+    const targetUrl = `https://www.twse.com.tw/rwd/zh/TAIEX/MI_5MINS_HIST?date=${date}&response=json`;
+
+    const response = await axios.get(targetUrl, {
+      headers: {
+        'User-Agent': headers[Math.floor(Math.random() * headers.length)],
+        'Accept': 'application/json, text/plain, */*',
+      }
+    });
+
+    console.log(response.data);
+    res.json(response.data);
+  } catch (error) {
+    console.error('Proxy error:', error);
+    res.status(500).json({ error: 'Failed to fetch data' });
+  }
+});
+
+
 app.use('/', (req, res) => {
   res.send('Server is running');
 });
