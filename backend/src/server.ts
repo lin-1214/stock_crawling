@@ -3,7 +3,7 @@ import axios from 'axios';
 import cors from 'cors';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import User from '../model/user';
+import User from './user';
 
 const app = express();
 const port = process.env.PORT || 3001; 
@@ -154,7 +154,7 @@ app.post('/api/register', async (req, res) => {
 
     const newUser = new User({ username, password });
     await newUser.save();
-    
+
     res.json({ success: true, message: 'User registered successfully' });
   } catch (error) {
     console.error('Register error:', error);
