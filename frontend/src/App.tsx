@@ -116,7 +116,7 @@ function App() {
 
         if (dates.length > 0) {
           if (mode === 'price') {
-            downloadPriceData(dates, closingPrices, volume);
+            downloadPriceData(dates, closingPrices);
           } else if (mode === 'ratio') {
             downloadRatioData(dates, PERatio, PBRatio);
           } else if (mode === 'index') {
