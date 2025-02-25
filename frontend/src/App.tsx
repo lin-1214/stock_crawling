@@ -68,7 +68,10 @@ function App() {
   const handleCrawlData = async () => {
     try {
       setLoading(true);
-      
+
+      // dumb funciton
+      console.log(showAuth);
+
       await (async () => {
         const dates: string[] = [];
         const closingPrices: number[] = [];
@@ -241,7 +244,7 @@ function App() {
     }
   };
 
-  const downloadPriceData = (dates: string[], closingPrices: number[], volume: number[]) => {
+  const downloadPriceData = (dates: string[], closingPrices: number[]) => {
     const returns = calculateReturns(closingPrices);
     // const csvContent = ['Date,Closing Price,Return,Volume\n'];
     const csvContent = ['Date,Closing Price,Return\n'];
