@@ -1,6 +1,9 @@
 import express from 'express';
 import axios from 'axios';
 import cors from 'cors';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+import User from '../model/user';
 
 const app = express();
 const port = process.env.PORT || 3001; 
@@ -28,6 +31,13 @@ const headers = [
     "Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/116.0",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:109.0) Gecko/20100101 Firefox/116.0"
   ] as const;
+
+dotenv.config();
+const MONGODB_URI = process.env.MONGO_URL || '';
+
+mongoose.connect(MONGODB_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((err) => console.error('MongoDB connection error:', err));
 
 // Proxy endpoint for TPEX trading data
 app.get('/api/closingTWSE', async (req, res) => {
@@ -132,7 +142,49 @@ app.get('/api/indexTWSE', async (req, res) => {
   }
 });
 
+app.post('/api/register', async (req, res) => {
+  try {
+    const { username, password } = req.body;
 
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      res.json({ success: false, message: 'User already exists' });
+      return;
+    }
+
+    const newUser = new User({ username, password });
+    await newUser.save();
+    
+    res.json({ success: true, message: 'User registered successfully' });
+  } catch (error) {
+    console.error('Register error:', error);
+    res.status(500).json({ message: 'Failed to register' });
+  }
+});
+
+app.post('/api/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    const user = await User.findOne({ username });
+    if (!user) {
+      res.json({ success: false, message: 'User not found' });
+      return;
+    }
+    if (await user?.comparePassword(password as string)) {
+      res.json({ success: true, message: 'Login successful' });
+      return;
+    } else {
+      res.json({ success: false, message: 'Invalid password' });
+      return;
+    }
+    
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Failed to login' });
+  }
+});
+
+// Move the root route handler before other routes
 app.use('/', (req, res) => {
   res.send('Server is running');
 });
