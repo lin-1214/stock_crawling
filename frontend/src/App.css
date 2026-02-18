@@ -959,10 +959,24 @@ html {
   pointer-events: none;
 }
 
+.page-title {
+  width: 100%;
+  text-align: center;
+  font-size: clamp(1.8rem, 4vw, 2.8rem);
+  padding: 2.5rem 0 0.5rem;
+  margin: 0;
+  background: linear-gradient(45deg, #fff, #888);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  position: relative;
+  z-index: 1;
+}
+
 .main-page-container {
   display: flex;
   width: 100%;
-  height: 100vh;
+  height: calc(100vh - 4rem);
   position: relative;
   overflow: hidden;
 }
@@ -1048,6 +1062,10 @@ html {
 }
 
 /* Update sidebar content styles */
+.sidebar-content {
+  padding-top: 60px;
+}
+
 .sidebar-content h3 {
   color: #fff;
   margin-top: 20px;
