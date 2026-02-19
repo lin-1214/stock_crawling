@@ -131,6 +131,27 @@ app.get('/api/indexTWSE', async (req, res) => {
   }
 });
 
+// Proxy for Yahoo Finance — global market indices (no API key needed)
+app.get('/api/marketIndex', async (req, res) => {
+  try {
+    const { symbol } = req.query;
+    const targetUrl = `https://query2.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1d&range=1mo&includePrePost=false`;
+
+    const response = await axios.get(targetUrl, {
+      headers: {
+        'User-Agent': headers[Math.floor(Math.random() * headers.length)],
+        'Accept': 'application/json',
+      },
+      timeout: 8000,
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    console.error('Market index proxy error:', error);
+    res.status(500).json({ error: 'Failed to fetch market index data' });
+  }
+});
+
 app.use('/', (req, res) => {
   res.send('Server is running');
 });
