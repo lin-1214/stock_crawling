@@ -18,6 +18,8 @@ interface MarketIndexData {
 
 interface OHLCRow { date: string; open: string; high: string; low: string; close: string }
 
+interface ChartRow { date: string; close: number; volume: number }
+
 interface StockStats { latest: number; high: number; low: number; change: number; avgRet: number }
 
 interface Toast { type: 'success' | 'error'; message: string }
@@ -108,6 +110,136 @@ function Sparkline({ values, isPositive, uid }: { values: number[]; isPositive: 
       <path d={area} fill={`url(#${gid})`} />
       <path d={line} fill="none" stroke={color} strokeWidth="1.5" strokeLinejoin="round" />
     </svg>
+  )
+}
+
+// ── StockChart ────────────────────────────────────────────────────────────────
+function calcMA(prices: number[], period: number): (number | null)[] {
+  return prices.map((_, i) =>
+    i < period - 1 ? null
+    : prices.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0) / period
+  )
+}
+
+function StockChart({ rows }: { rows: ChartRow[] }) {
+  if (rows.length < 2) return null
+
+  const W = 900, PH = 240, VH = 80, PAD_L = 64, PAD_R = 16, PAD_T = 16, PAD_B = 24
+  const totalH = PH + VH + PAD_B
+  const plotW  = W - PAD_L - PAD_R
+
+  const prices  = rows.map(r => r.close)
+  const volumes = rows.map(r => r.volume)
+
+  const pMin = Math.min(...prices), pMax = Math.max(...prices)
+  const pRange = pMax - pMin || 1
+  const vMax   = Math.max(...volumes) || 1
+
+  const px = (i: number) => PAD_L + (i / (rows.length - 1)) * plotW
+  const py = (v: number) => PAD_T + ((pMax - v) / pRange) * (PH - PAD_T - 8)
+
+  // Price line + fill
+  const linePts = rows.map((r, i) => `${i===0?'M':'L'}${px(i).toFixed(1)},${py(r.close).toFixed(1)}`).join(' ')
+  const lastX = px(rows.length - 1)
+  const areaPath = `${linePts} L${lastX.toFixed(1)},${(PH - 8).toFixed(1)} L${PAD_L.toFixed(1)},${(PH - 8).toFixed(1)} Z`
+
+  // MA paths — lift pen on null
+  const buildMAPath = (maVals: (number | null)[]) => {
+    let d = ''
+    maVals.forEach((v, i) => {
+      if (v === null) return
+      d += `${d === '' || maVals[i-1] === null ? 'M' : 'L'}${px(i).toFixed(1)},${py(v).toFixed(1)} `
+    })
+    return d
+  }
+
+  const ma5Path  = buildMAPath(calcMA(prices, 5))
+  const ma10Path = buildMAPath(calcMA(prices, 10))
+  const ma20Path = buildMAPath(calcMA(prices, 20))
+
+  // Y-axis ticks (5 levels)
+  const yTicks = Array.from({ length: 5 }, (_, i) => {
+    const val = pMin + (pRange / 4) * i
+    return { val, y: py(val) }
+  })
+
+  // Volume bars
+  const barW = Math.max(1, plotW / rows.length - 1)
+  const volBaseY = PH + VH - 4
+  const volScale = (VH - 12) / vMax
+
+  // X labels — show ~6 evenly spaced
+  const labelStep = Math.max(1, Math.floor(rows.length / 6))
+  const xLabels = rows
+    .map((r, i) => ({ label: r.date.replace(/\//g, '-'), i }))
+    .filter((_, i) => i % labelStep === 0 || i === rows.length - 1)
+
+  return (
+    <div className="chart-wrap">
+      <svg className="stock-chart-svg" viewBox={`0 0 ${W} ${totalH}`} preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <linearGradient id="priceGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stopColor="var(--accent)" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
+        {/* Y-axis ticks */}
+        {yTicks.map(({ val, y }, i) => (
+          <g key={i}>
+            <line x1={PAD_L - 4} y1={y} x2={W - PAD_R} y2={y}
+              stroke="rgba(119,110,223,0.1)" strokeWidth="1" />
+            <text x={PAD_L - 8} y={y + 4} textAnchor="end"
+              fontSize="9" fill="rgba(90,90,122,0.9)" fontFamily="monospace">
+              {val >= 1000 ? val.toFixed(0) : val.toFixed(1)}
+            </text>
+          </g>
+        ))}
+
+        {/* Price area fill */}
+        <path d={areaPath} fill="url(#priceGrad)" />
+
+        {/* Price line */}
+        <path d={linePts} fill="none" stroke="var(--accent-hi)" strokeWidth="1.5" strokeLinejoin="round" />
+
+        {/* MA lines */}
+        {ma5Path  && <path d={ma5Path}  fill="none" stroke="#f5c518" strokeWidth="1.2" strokeLinejoin="round" />}
+        {ma10Path && <path d={ma10Path} fill="none" stroke="var(--accent)" strokeWidth="1.2" strokeLinejoin="round" />}
+        {ma20Path && <path d={ma20Path} fill="none" stroke="#fb923c" strokeWidth="1.2" strokeLinejoin="round" />}
+
+        {/* Volume bars */}
+        {rows.map((r, i) => {
+          const bx = px(i) - barW / 2
+          const bh = r.volume * volScale
+          const by = volBaseY - bh
+          return (
+            <rect key={i} x={bx.toFixed(1)} y={by.toFixed(1)} width={barW.toFixed(1)} height={bh.toFixed(1)}
+              fill="rgba(119,110,223,0.35)" />
+          )
+        })}
+
+        {/* X labels */}
+        {xLabels.map(({ label, i }) => (
+          <text key={i} x={px(i)} y={totalH - 4} textAnchor="middle"
+            fontSize="8" fill="rgba(90,90,122,0.9)" fontFamily="monospace">
+            {label}
+          </text>
+        ))}
+
+        {/* Panel divider */}
+        <line x1={PAD_L} y1={PH} x2={W - PAD_R} y2={PH}
+          stroke="rgba(119,110,223,0.15)" strokeWidth="1" />
+      </svg>
+
+      {/* Legend */}
+      <div className="chart-legend">
+        <span className="legend-item" style={{ color: 'var(--accent-hi)' }}>── PRICE</span>
+        <span className="legend-item" style={{ color: '#f5c518' }}>── MA5</span>
+        <span className="legend-item" style={{ color: 'var(--accent)' }}>── MA10</span>
+        <span className="legend-item" style={{ color: '#fb923c' }}>── MA20</span>
+        <span className="legend-item" style={{ color: 'rgba(119,110,223,0.7)' }}>▬ VOL</span>
+      </div>
+    </div>
   )
 }
 
@@ -267,44 +399,122 @@ function LookupPage({ showToast }: { showToast: (t: Toast) => void }) {
   const [stockStats, setStockStats] = useState<StockStats | null>(null)
   const [fetching, setFetching]     = useState(false)
   const [fetched, setFetched]       = useState(false)
+  const [chartRows, setChartRows]   = useState<ChartRow[]>([])
   const [log, setLog] = useState<string[]>(['> READY'])
   const addLog = (msg: string) => setLog(p => [`> ${msg}`, ...p].slice(0, 12))
 
+  // Default: 3 months ago → current month
+  const initDates = () => {
+    const now = new Date()
+    const end = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    const s   = new Date(now.getFullYear(), now.getMonth() - 2, 1)
+    const start = `${s.getFullYear()}-${String(s.getMonth() + 1).padStart(2, '0')}`
+    return { start, end }
+  }
+  const [dateStart, setDateStart] = useState(() => initDates().start)
+  const [dateEnd,   setDateEnd]   = useState(() => initDates().end)
+
+  const now = new Date()
+  const maxMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  const minMonth = '2004-01'
+  const MAX_MONTHS = 12
+
+  const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
+
   const fetchStock = async () => {
     if (!lookupCode.trim() || fetching) return
-    setFetching(true); setFetched(false); setStockRows([]); setStockStats(null)
-    const now = new Date()
-    const y = now.getFullYear(), m = now.getMonth() + 1
-    const date = lookupExch === 'twse' ? fmtTWSE(y, m) : fmtTPEX(y, m)
-    const ep   = lookupExch === 'twse' ? '/closingTWSE' : '/closingTPEX'
-    addLog(`QUERYING ${lookupCode.toUpperCase()} @ ${lookupExch.toUpperCase()}`)
+
+    // Guard: dateStart > dateEnd
+    if (dateStart > dateEnd) {
+      showToast({ type: 'error', message: 'Start date must not be after end date.' })
+      return
+    }
+
+    // Guard: range > 12 months
+    const sy = parseInt(dateStart.split('-')[0]), sm = parseInt(dateStart.split('-')[1])
+    const ey = parseInt(dateEnd.split('-')[0]),   em = parseInt(dateEnd.split('-')[1])
+    const diffMonths = (ey - sy) * 12 + (em - sm)
+    if (diffMonths >= MAX_MONTHS) {
+      showToast({ type: 'error', message: `Range too large — max ${MAX_MONTHS} months.` })
+      return
+    }
+
+    // Guard: future end date
+    if (dateEnd > maxMonth) {
+      showToast({ type: 'error', message: 'End date cannot be in the future.' })
+      return
+    }
+
+    setFetching(true); setFetched(false)
+    setStockRows([]); setStockStats(null); setChartRows([])
+
+    const ep = lookupExch === 'twse' ? '/closingTWSE' : '/closingTPEX'
+
+    addLog(`QUERYING ${lookupCode.toUpperCase()} @ ${lookupExch.toUpperCase()} ${dateStart}→${dateEnd}`)
+
+    const allRows:  OHLCRow[]  = []
+    const allChart: ChartRow[] = []
+
     try {
-      const res  = await instance.get(ep, { params: { date, code: lookupCode } })
-      const raw: string[][] = lookupExch === 'twse'
-        ? (res.data?.data ?? [])
-        : (res.data?.tables?.[0]?.data ?? [])
-      if (!raw.length) {
-        addLog(`NO DATA — ${lookupCode}`); showToast({ type: 'error', message: `No data for ${lookupCode}` }); return
+      for (let y = sy; y <= ey; y++) {
+        const ms = y === sy ? sm : 1
+        const me = y === ey ? em : 12
+        for (let m = ms; m <= me; m++) {
+          await delay(100)
+          const date = lookupExch === 'twse' ? fmtTWSE(y, m) : fmtTPEX(y, m)
+          addLog(`FETCH ${y}/${String(m).padStart(2, '0')}`)
+
+          try {
+            const res = await instance.get(ep, { params: { date, code: lookupCode } })
+            const raw: string[][] = lookupExch === 'twse'
+              ? (res.data?.data ?? [])
+              : (res.data?.tables?.[0]?.data ?? [])
+            if (raw.length) {
+              const rows = lookupExch === 'twse' ? parseClosingTWSE(raw) : parseClosingTPEX(raw)
+              allRows.push(...rows)
+              raw.forEach(r => {
+                const close  = parseFloat(r[6].replace(/,/g, ''))
+                const volume = lookupExch === 'twse'
+                  ? parseFloat(r[1].replace(/,/g, ''))
+                  : 1000 * parseFloat(r[1].replace(/,/g, ''))
+                if (!isNaN(close)) allChart.push({ date: r[0], close, volume: isNaN(volume) ? 0 : volume })
+              })
+            }
+          } catch { addLog(`ERR: ${y}/${m}`) }
+
+        }
       }
-      const rows   = lookupExch === 'twse' ? parseClosingTWSE(raw) : parseClosingTPEX(raw)
-      const prices = raw.map(r => parseFloat(r[6].replace(/,/g, '')))
-      const valid  = prices.filter(p => !isNaN(p))
-      const high   = Math.max(...valid), low = Math.min(...valid)
-      const latest = valid[valid.length - 1], prev = valid[valid.length - 2] ?? latest
+
+      if (!allRows.length) {
+        addLog(`NO DATA — ${lookupCode}`)
+        showToast({ type: 'error', message: `No data for ${lookupCode}` })
+        return
+      }
+
+      const prices = allChart.map(r => r.close).filter(p => !isNaN(p))
+      const high   = Math.max(...prices), low = Math.min(...prices)
+      const latest = prices[prices.length - 1], prev = prices[prices.length - 2] ?? latest
       const change = Number(((latest - prev) / prev * 100).toFixed(2))
       const rets   = calcReturns(prices)
-      const avgRet = Number((rets.slice(1).reduce((a,b) => a+b, 0) / Math.max(rets.length-1, 1) * 100).toFixed(4))
-      setStockRows(rows); setStockStats({ latest, high, low, change, avgRet }); setFetched(true)
-      addLog(`OK — ${raw.length} RECORDS`)
+      const avgRet = Number((rets.slice(1).reduce((a, b) => a + b, 0) / Math.max(rets.length - 1, 1) * 100).toFixed(4))
+
+      setStockRows(allRows)
+      setChartRows(allChart)
+      setStockStats({ latest, high, low, change, avgRet })
+      setFetched(true)
+      addLog(`OK — ${allRows.length} RECORDS`)
     } catch {
-      addLog('ERR: REQUEST FAILED'); showToast({ type: 'error', message: 'Request failed.' })
+      addLog('ERR: REQUEST FAILED')
+      showToast({ type: 'error', message: 'Request failed.' })
     } finally { setFetching(false) }
   }
 
   return (
     <div className="lookup-page">
       <section className="glass-card">
-        <div className="section-hdr"><span className="clr-accent">{'// '}</span>STOCK LOOKUP — CURRENT MONTH</div>
+        <div className="section-hdr">
+          <span className="clr-accent">{'// '}</span>STOCK LOOKUP — {dateStart} → {dateEnd}
+        </div>
         <div className="lookup-bar">
           <span className="field-pre">CODE:</span>
           <input className="term-input" value={lookupCode}
@@ -316,6 +526,14 @@ function LookupPage({ showToast }: { showToast: (t: Toast) => void }) {
             <option value="twse">TWSE</option>
             <option value="tpex">TPEX</option>
           </select>
+          <span className="field-pre">FROM:</span>
+          <input type="month" className="term-input" value={dateStart}
+            min={minMonth} max={dateEnd}
+            onChange={e => setDateStart(e.target.value)} />
+          <span className="field-pre">TO:</span>
+          <input type="month" className="term-input" value={dateEnd}
+            min={dateStart} max={maxMonth}
+            onChange={e => setDateEnd(e.target.value)} />
           <button className="btn-accent" onClick={fetchStock} disabled={fetching}>
             {fetching ? 'FETCHING...' : 'FETCH →'}
           </button>
@@ -324,11 +542,11 @@ function LookupPage({ showToast }: { showToast: (t: Toast) => void }) {
         {stockStats && (
           <div className="stat-row">
             {[
-              { label: 'LATEST',   value: stockStats.latest.toFixed(2),                                  sign: null },
-              { label: 'DAY CHG',  value: `${stockStats.change>=0?'+':''}${stockStats.change}%`,          sign: stockStats.change },
-              { label: 'MTH HIGH', value: stockStats.high.toFixed(2),                                    sign: null },
-              { label: 'MTH LOW',  value: stockStats.low.toFixed(2),                                     sign: null },
-              { label: 'AVG RET',  value: `${stockStats.avgRet>=0?'+':''}${stockStats.avgRet}%`,         sign: stockStats.avgRet },
+              { label: 'LATEST',   value: stockStats.latest.toFixed(2),                              sign: null },
+              { label: 'DAY CHG',  value: `${stockStats.change>=0?'+':''}${stockStats.change}%`,      sign: stockStats.change },
+              { label: 'RANGE HI', value: stockStats.high.toFixed(2),                                sign: null },
+              { label: 'RANGE LO', value: stockStats.low.toFixed(2),                                 sign: null },
+              { label: 'AVG RET',  value: `${stockStats.avgRet>=0?'+':''}${stockStats.avgRet}%`,     sign: stockStats.avgRet },
             ].map(({ label, value, sign }) => (
               <div className="stat-card" key={label}>
                 <div className="stat-lbl">{label}</div>
@@ -338,8 +556,10 @@ function LookupPage({ showToast }: { showToast: (t: Toast) => void }) {
           </div>
         )}
 
+        {fetched && chartRows.length > 0 && <StockChart rows={chartRows} />}
+
         {fetched && stockRows.length > 0 && (
-          <div className="table-wrap">
+          <div className="table-wrap" style={{ marginTop: '1.25rem' }}>
             <table className="tech-table">
               <thead><tr><th>DATE</th><th>OPEN</th><th>HIGH</th><th>LOW</th><th>CLOSE</th></tr></thead>
               <tbody>
@@ -389,6 +609,10 @@ function CrawlerPage({ showToast }: { showToast: (t: Toast) => void }) {
   }, [mode])
 
   const handleCrawl = async () => {
+    if (formData.start > formData.end) {
+      showToast({ type: 'error', message: 'Start date must not be after end date.' })
+      return
+    }
     setLoading(true); addLog(`STARTING ${mode.toUpperCase()} CRAWL...`)
     try {
       const dates: string[]=[], prices: number[]=[], volume: number[]=[]
@@ -496,11 +720,13 @@ function CrawlerPage({ showToast }: { showToast: (t: Toast) => void }) {
             <div className="field-group">
               <label className="field-pre">START DATE</label>
               <input type="month" className="term-input w-full" value={formData.start}
+                max={formData.end}
                 onChange={e=>setFormData(p=>({...p,start:e.target.value}))} />
             </div>
             <div className="field-group">
               <label className="field-pre">END DATE</label>
               <input type="month" className="term-input w-full" value={formData.end}
+                min={formData.start}
                 onChange={e=>setFormData(p=>({...p,end:e.target.value}))} />
             </div>
             {mode !== 'index' && (<>

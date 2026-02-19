@@ -152,6 +152,7 @@ app.get('/api/marketIndex', async (req, res) => {
   }
 });
 
+
 app.use('/', (req, res) => {
   res.send('Server is running');
 });
