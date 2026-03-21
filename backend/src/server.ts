@@ -131,6 +131,27 @@ app.get('/api/indexTWSE', async (req, res) => {
   }
 });
 
+app.post('/api/indexTPEX', async (req, res) => {
+  try {
+    const { date } = req.body;  // date in YYYY/MM/01 format
+    const targetUrl = `https://www.tpex.org.tw/www/zh-tw/indexInfo/inx?date=${date}&id=&response=json`;
+
+    const response = await axios.post(targetUrl, null, {
+      headers: {
+        'User-Agent': headers[Math.floor(Math.random() * headers.length)],
+        'Accept': 'application/json, text/javascript, */*; q=0.01',
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
+
+    console.log(response.data);
+    res.json(response.data);
+  } catch (error) {
+    console.error('Proxy error:', error);
+    res.status(500).json({ error: 'Failed to fetch data' });
+  }
+});
+
 // Proxy for Yahoo Finance — global market indices (no API key needed)
 app.get('/api/marketIndex', async (req, res) => {
   try {

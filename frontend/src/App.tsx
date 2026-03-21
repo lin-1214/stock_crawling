@@ -604,10 +604,6 @@ function CrawlerPage({ showToast }: { showToast: (t: Toast) => void }) {
   }
   const delay = (ms: number) => new Promise(r => setTimeout(r, ms))
 
-  useEffect(() => {
-    if (mode === 'index') setFormData(p => ({ ...p, website: 'twse' }))
-  }, [mode])
-
   const handleCrawl = async () => {
     if (formData.start > formData.end) {
       showToast({ type: 'error', message: 'Start date must not be after end date.' })
@@ -619,6 +615,7 @@ function CrawlerPage({ showToast }: { showToast: (t: Toast) => void }) {
       const pe: number[]=[], pb: number[]=[], idx: number[]=[]
       const sy=parseInt(formData.start.split('-')[0]), sm=parseInt(formData.start.split('-')[1])
       const ey=parseInt(formData.end.split('-')[0]),   em=parseInt(formData.end.split('-')[1])
+
       for (let y=sy; y<=ey; y++) {
         const ms=y===sy?sm:1, me=y===ey?em:12
         for (let m=ms; m<=me; m++) {
@@ -629,6 +626,7 @@ function CrawlerPage({ showToast }: { showToast: (t: Toast) => void }) {
           else                     await crawlIndex(date, dates, idx)
         }
       }
+
       if (dates.length > 0) {
         if (mode==='price')      dlPrice(dates, prices)
         else if (mode==='ratio') dlRatio(dates, pe, pb)
@@ -678,10 +676,17 @@ function CrawlerPage({ showToast }: { showToast: (t: Toast) => void }) {
   const crawlIndex = async (date: string, dates: string[], values: number[]) => {
     try {
       await delay(100)
-      const res = await instance.get('/indexTWSE', { params: { date } })
-      const data: string[][] = res.data?.data ?? []
-      if (!data.length) { addLog(`NO INDEX: ${date}`, 'err'); return }
-      data.forEach(r => { dates.push(r[0]); values.push(parseFloat(r[4].replace(/,/g,''))) })
+      if (formData.website === 'tpex') {
+        const res = await (instance as any).post('/indexTPEX', { date })
+        const data: string[][] = res.data?.tables?.[0]?.data ?? []
+        if (!data.length) { addLog(`NO INDEX: ${date}`, 'err'); return }
+        data.forEach(r => { dates.push(r[0]); values.push(parseFloat(r[4].replace(/,/g,''))) })
+      } else {
+        const res = await instance.get('/indexTWSE', { params: { date } })
+        const data: string[][] = res.data?.data ?? []
+        if (!data.length) { addLog(`NO INDEX: ${date}`, 'err'); return }
+        data.forEach(r => { dates.push(r[0]); values.push(parseFloat(r[4].replace(/,/g,''))) })
+      }
     } catch { addLog(`INDEX ERR: ${date}`, 'err') }
   }
 
@@ -689,7 +694,7 @@ function CrawlerPage({ showToast }: { showToast: (t: Toast) => void }) {
     const a = document.createElement('a')
     a.href  = URL.createObjectURL(new Blob(rows, { type: 'text/csv;charset=utf-8;' }))
     a.download = type==='index'
-      ? `stock_${type}_${formData.start.replace(/-/g,'')}_${formData.end.replace(/-/g,'')}.csv`
+      ? `stock_${type}_${formData.website}_${formData.start.replace(/-/g,'')}_${formData.end.replace(/-/g,'')}.csv`
       : `stock_${type}_${formData.companyCode}_${formData.start.replace(/-/g,'')}_${formData.end.replace(/-/g,'')}.csv`
     document.body.appendChild(a); a.click(); document.body.removeChild(a)
     URL.revokeObjectURL(a.href)
@@ -729,21 +734,21 @@ function CrawlerPage({ showToast }: { showToast: (t: Toast) => void }) {
                 min={formData.start}
                 onChange={e=>setFormData(p=>({...p,end:e.target.value}))} />
             </div>
-            {mode !== 'index' && (<>
+            {mode !== 'index' && (
               <div className="field-group">
                 <label className="field-pre">COMPANY CODE</label>
                 <input type="text" className="term-input w-full" value={formData.companyCode}
                   onChange={e=>setFormData(p=>({...p,companyCode:e.target.value}))} />
               </div>
-              <div className="field-group">
-                <label className="field-pre">EXCHANGE</label>
-                <select className="term-input term-select w-full" value={formData.website}
-                  onChange={e=>setFormData(p=>({...p,website:e.target.value}))}>
-                  <option value="twse">TWSE</option>
-                  <option value="tpex">TPEX</option>
-                </select>
-              </div>
-            </>)}
+            )}
+            <div className="field-group">
+              <label className="field-pre">EXCHANGE</label>
+              <select className="term-input term-select w-full" value={formData.website}
+                onChange={e=>setFormData(p=>({...p,website:e.target.value}))}>
+                <option value="twse">TWSE</option>
+                <option value="tpex">TPEX</option>
+              </select>
+            </div>
           </div>
           <button className="btn-crawl" onClick={handleCrawl} disabled={loading}>
             {loading ? <><span className="btn-dot"/>CRAWLING {modeLabel}...</> : `CRAWL ${modeLabel} DATA →`}
@@ -776,7 +781,7 @@ function CrawlerPage({ showToast }: { showToast: (t: Toast) => void }) {
             <li>
               Select the <span className="clr-accent">exchange</span>:<br />
               <span className="clr-accent">TWSE</span> — Taiwan Stock Exchange (listed)<br />
-              <span className="clr-accent">TPEX</span> — OTC / emerging market stocks
+              <span className="clr-accent">TPEX</span> — OTC / 櫃買指數
             </li>
             <li>
               Confirm the company code is listed on the selected exchange before proceeding.
